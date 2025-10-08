@@ -1,7 +1,6 @@
-    <template>
+<template>
   <div class="app">
-    <h1>📝 My Awesome Todo List 🚀</h1>
-
+    <h1>📝 My Todo List (with Query String)</h1>
 
     <div class="input-area">
       <input
@@ -38,7 +37,17 @@ export default {
     },
     removeTask(index) {
       this.tasks.splice(index, 1)
+    },
+    checkQueryString() {
+      const params = new URLSearchParams(window.location.search)
+      const taskFromUrl = params.get('task')
+      if (taskFromUrl) {
+        this.tasks.push(decodeURIComponent(taskFromUrl))
+      }
     }
+  },
+  mounted() {
+    this.checkQueryString()
   }
 }
 </script>

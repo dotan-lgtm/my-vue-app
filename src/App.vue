@@ -1,6 +1,7 @@
     <template>
   <div class="app">
-    <h1>📝 My Todo List</h1>
+    <h1>📝 My Awesome Todo List 🚀</h1>
+
 
     <div class="input-area">
       <input

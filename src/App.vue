@@ -1,22 +1,29 @@
 <template>
   <div class="app">
-    <h1>📝 My Todo List (with Query String)</h1>
+    <h1>Conversation Data</h1>
 
-    <div class="input-area">
-      <input
-        v-model="newTask"
-        placeholder="הוסף משימה חדשה..."
-        @keyup.enter="addTask"
-      />
-      <button @click="addTask">הוסף</button>
+    <p v-if="conversationId">
+      Conversation ID: <strong>{{ conversationId }}</strong>
+    </p>
+
+    <div v-if="custNo || trackNo" class="results">
+    <p><strong>Customer No:</strong> {{ custNo }}</p>
+    <p><strong>Track No:</strong> {{ trackNo }}</p>
     </div>
 
-    <ul>
-      <li v-for="(task, index) in tasks" :key="index">
-        {{ task }}
-        <button class="delete" @click="removeTask(index)">❌</button>
-      </li>
-    </ul>
+    <p v-else>
+      No conversationId found in URL.
+    </p>
+
+    <div v-if="loading">Loading data...</div>
+
+    <div v-else-if="error" class="error">
+      Error: {{ error }}
+    </div>
+
+    <pre v-else class="response-box">
+      {{ apiResponse }}
+    </pre>
   </div>
 </template>
 
@@ -24,88 +31,84 @@
 export default {
   data() {
     return {
-      newTask: '',
-      tasks: []
-    }
+      conversationId: null,
+      apiResponse: null,
+      error: null,
+      loading: false,
+      custNo: null,
+      trackNo: null
+    };
   },
   methods: {
-    addTask() {
-      if (this.newTask.trim() !== '') {
-        this.tasks.push(this.newTask.trim())
-        this.newTask = ''
-      }
+    getConversationIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("conversationId");
+      this.conversationId = id;
+      console.log("Conversation ID:", id);
     },
-    removeTask(index) {
-      this.tasks.splice(index, 1)
-    },
-    checkQueryString() {
-      const params = new URLSearchParams(window.location.search)
-      const taskFromUrl = params.get('task')
-      if (taskFromUrl) {
-        this.tasks.push(decodeURIComponent(taskFromUrl))
-      }
+
+    async fetchConversationData() {
+    if (!this.conversationId) return;
+
+    this.loading = true;
+    this.error = null;
+
+    const url = `http://localhost:3000/api/conversation/${this.conversationId}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+        const data = await res.json();
+
+        // שמור את הפלט הגולמי
+        this.apiResponse = JSON.stringify(data, null, 2);
+
+        // 🔹 חילוץ user.content
+        if (data?.data?.length > 0) {
+        const userContentStr = data.data[0].user?.content;
+        if (userContentStr) {
+            const userContent = JSON.parse(userContentStr); // הפוך מחרוזת לאובייקט
+
+            // שלוף cust_no ו-track_no
+            this.custNo = userContent.cust_no || "N/A";
+            this.trackNo = userContent.track_no || "N/A";
+        }
+        }
+    } catch (err) {
+        this.error = err.message;
+        console.error("API error:", err);
+    } finally {
+        this.loading = false;
     }
+    }
+
+
+
   },
   mounted() {
-    this.checkQueryString()
+    this.getConversationIdFromUrl();
+    this.fetchConversationData();
   }
-}
+};
 </script>
 
 <style>
 .app {
   font-family: Calibri, sans-serif;
   text-align: center;
-  max-width: 350px;
-  margin: 60px auto;
-  background: #f9f9f9;
-  border-radius: 12px;
+  margin: 50px auto;
+  max-width: 800px;
+}
+.response-box {
+  text-align: left;
+  background: #f3f3f3;
   padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
 }
-
-h1 {
-  margin-bottom: 20px;
-}
-
-.input-area {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 15px;
-}
-
-input {
-  padding: 8px;
-  width: 70%;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
-button {
-  margin-left: 8px;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  background-color: black;
-  color: white;
-  cursor: pointer;
-}
-
-button.delete {
-  background-color: red;
-}
-
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  display: flex;
-  justify-content: space-between;
-  background: white;
-  border-radius: 6px;
-  margin-top: 8px;
-  padding: 8px 10px;
+.error {
+  color: red;
+  font-weight: bold;
 }
 </style>
